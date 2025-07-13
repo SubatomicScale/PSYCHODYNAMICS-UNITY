@@ -132,7 +132,7 @@ public class PlayerMovement : MonoBehaviour
         rb.useGravity = !IsSloping();
 
         //print gravity state for debugging
-        Debug.Log("Gravity Enabled: " + rb.useGravity);
+        //Debug.Log("Gravity Enabled: " + rb.useGravity);
     }
 
     private void SpeedControl()
