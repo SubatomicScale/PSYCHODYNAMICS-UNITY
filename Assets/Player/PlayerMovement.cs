@@ -129,10 +129,10 @@ public class PlayerMovement : MonoBehaviour
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
 
         // turn gravity off when on slope
-        rb.useGravity = !OnSlope();
+        rb.useGravity = !IsSloping();
 
         //print gravity state for debugging
-        Debug.Log("Gravity Enabled: " + rb.useGravity);
+        //Debug.Log("Gravity Enabled: " + rb.useGravity);
     }
 
     private void SpeedControl()
@@ -187,13 +187,18 @@ public class PlayerMovement : MonoBehaviour
 
     private bool OnSlope()
     {
-        if(Physics.Raycast(transform.position, Vector3.down, out slopeHit, playerHeight * 0.5f + 0.3f))
+        if (Physics.Raycast(transform.position, Vector3.down, out slopeHit, playerHeight * 0.5f + 0.3f))
         {
             float angle = Vector3.Angle(Vector3.up, slopeHit.normal);
             return angle < maxSlopeAngle && angle != 0;
         }
 
         return false;
+    }
+
+    private bool IsSloping()
+    {
+        return OnSlope() && !grounded;
     }
 
     private Vector3 GetSlopeMoveDirection()
