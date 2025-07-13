@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,6 +9,10 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement")]
     public float moveSpeed;
     public float walkSpeed;
+    public float slideSpeed;
+
+    private float desiredMoveSpeed;
+    private float lastDesiredMoveSpeed;
 
     [Header("Jumping")]
     public float jumpForce;
@@ -15,14 +20,8 @@ public class PlayerMovement : MonoBehaviour
     public float airMultiplier;
     bool readyToJump = true;
 
-    [Header("Crouching")]
-    public float crouchSpeed;
-    public float crouchYScale;
-    private float startYScale;
-
     [Header("Keybinds")]
     public KeyCode jumpKey = KeyCode.Space;
-    public KeyCode crouchKey = KeyCode.LeftControl;
 
     [Header("Ground Check")]
     public float playerHeight;
@@ -44,12 +43,21 @@ public class PlayerMovement : MonoBehaviour
 
     Rigidbody rb;
 
+    public bool sliding;
+
+    public MovementState state;
+    public enum MovementState
+    {
+        walking,
+        sliding,
+        air
+    }
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true; // prevent the rigidbody from rotating
-        startYScale = transform.localScale.y; // store the initial y scale of the player
     }
 
     // Update is called once per frame
@@ -89,20 +97,67 @@ public class PlayerMovement : MonoBehaviour
             Invoke(nameof(ResetJump), jumpCooldown);
         }
 
-        // start crouch
-        if (Input.GetKeyDown(crouchKey))
+    }
+
+    private void StateHandler()
+    {
+
+        // Mode - Sliding
+        if (sliding)
         {
-            transform.localScale = new Vector3(transform.localScale.x, crouchYScale, transform.localScale.z);
-            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse); // push down to prevent clipping through the ground
-            moveSpeed = crouchSpeed; // reduce speed when crouching
+            state = MovementState.sliding;
+            if (OnSlope() && rb.linearVelocity.y < 0.1f)
+            {
+                desiredMoveSpeed = slideSpeed;
+            }
+            else
+            {
+                desiredMoveSpeed = moveSpeed + 3f;
+            }
         }
 
-        // stop crouch
-        if (Input.GetKeyUp(crouchKey))
+        // Mode - Walking
+        else if (grounded)
         {
-            transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
-            moveSpeed = walkSpeed; // reset speed when not crouching
+            state = MovementState.walking;
+            desiredMoveSpeed = walkSpeed;
         }
+
+        // Mode - Air
+        else
+        {
+            state = MovementState.air;
+        }
+
+        // check if desiredMoveSpeed has changed drastically
+        if (Mathf.Abs(desiredMoveSpeed - lastDesiredMoveSpeed) > 4f)
+        {
+            StopAllCoroutines();
+            StartCoroutine(SmoothlyLerpMoveSpeed());
+        }
+        else 
+        {
+            moveSpeed = desiredMoveSpeed;
+        }
+
+        lastDesiredMoveSpeed = desiredMoveSpeed;
+    }
+
+    private IEnumerator SmoothlyLerpMoveSpeed()
+    {
+        // smoothly movementSpeed to desired value
+        float time = 0;
+        float difference = Mathf.Abs(desiredMoveSpeed - moveSpeed);
+        float startValue = moveSpeed;
+
+        while (time < difference)
+        {
+            moveSpeed = Mathf.Lerp(startValue, desiredMoveSpeed, time / difference);
+            time += Time.deltaTime;
+            yield return null;
+        }
+
+        moveSpeed = desiredMoveSpeed; // ensure we end exactly at the desired speed
     }
 
     private void MovePlayer()
@@ -119,7 +174,7 @@ public class PlayerMovement : MonoBehaviour
         // on slope
         if (OnSlope())
         {
-            rb.AddForce(GetSlopeMoveDirection() * moveSpeed * 20f, ForceMode.Force);
+            rb.AddForce(GetSlopeMoveDirection(moveDirection) * moveSpeed * 20f, ForceMode.Force);
             if (rb.linearVelocity.y > 0)
                 rb.AddForce(Vector3.down * 90f, ForceMode.Force); // prevent jumping off slopes
         }
@@ -185,7 +240,7 @@ public class PlayerMovement : MonoBehaviour
         exitingSlope = false;
     }
 
-    private bool OnSlope()
+    public bool OnSlope()
     {
         if (Physics.Raycast(transform.position, Vector3.down, out slopeHit, playerHeight * 0.5f + 0.3f))
         {
@@ -201,9 +256,9 @@ public class PlayerMovement : MonoBehaviour
         return OnSlope() && !grounded;
     }
 
-    private Vector3 GetSlopeMoveDirection()
+    public Vector3 GetSlopeMoveDirection(Vector3 direction)
     {
-        return Vector3.ProjectOnPlane(moveDirection, slopeHit.normal).normalized;
+        return Vector3.ProjectOnPlane(direction, slopeHit.normal).normalized;
     }
 
 }
