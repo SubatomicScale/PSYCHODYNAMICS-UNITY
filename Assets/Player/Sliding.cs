@@ -15,7 +15,7 @@ public class SlidingDone : MonoBehaviour
     public float slideForce = 200f;
     private float slideTimer;
 
-    public float slideYScale = 0.5f;
+    public float slideYScale;
     private float startYScale;
 
     [Header("Input")]
@@ -54,6 +54,7 @@ public class SlidingDone : MonoBehaviour
         pm.sliding = true;
 
         playerObj.localScale = new Vector3(playerObj.localScale.x, slideYScale, playerObj.localScale.z);
+
         rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
 
         slideTimer = maxSlideTime;
@@ -93,5 +94,6 @@ public class SlidingDone : MonoBehaviour
         pm.sliding = false;
 
         playerObj.localScale = new Vector3(playerObj.localScale.x, startYScale, playerObj.localScale.z);
+
     }
 }
