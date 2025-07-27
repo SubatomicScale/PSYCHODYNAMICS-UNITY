@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 
@@ -9,10 +7,12 @@ public class PlayerCam : MonoBehaviour
     public float sensY;
 
     public Transform orientation;
-    public Transform camHolder;
 
     float xRotation;
     float yRotation;
+
+    private float currentTilt = 0f;
+    private Tweener tiltTween;
 
     private void Start()
     {
@@ -32,7 +32,8 @@ public class PlayerCam : MonoBehaviour
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
         // rotate cam and orientation
-        this.transform.rotation = Quaternion.Euler(xRotation, yRotation, 0);
+        // Incorporate the currentTilt into the final rotation
+        this.transform.rotation = Quaternion.Euler(xRotation, yRotation, currentTilt);
         orientation.rotation = Quaternion.Euler(0, yRotation, 0);
     }
 
@@ -43,6 +44,12 @@ public class PlayerCam : MonoBehaviour
 
     public void DoTilt(float zTilt)
     {
-        transform.DOLocalRotate(new Vector3(0, 0, zTilt), 0.25f);
+        // Kill any existing tilt tween to prevent conflicts
+        if (tiltTween != null && tiltTween.IsActive())
+        {
+            tiltTween.Kill();
+        }
+        // Use DOTween to smoothly update the currentTilt value
+        tiltTween = DOTween.To(() => currentTilt, x => currentTilt = x, zTilt, 0.25f);
     }
 }
